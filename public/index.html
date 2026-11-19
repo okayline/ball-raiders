@@ -20,7 +20,7 @@
 </head>
 <body>
 <main>
-  <h1>BALL RAIDERS</h1>
+  <h1>BALL RAIDERS <small id="ver" class="dim" style="font-size:11px;letter-spacing:0"></small></h1>
   <div class="row"><span>Stash <b id="stash" class="gold"></b></span><span>Balls <b id="balls"></b></span></div>
   <div class="row"><span>Carrying <b id="carry">-</b></span><span>Banked this run <b id="runBank"></b></span></div>
   <div class="row dim"><span>Board <b id="boardNo">1</b>/3</span><span>Prize hole next: <b id="prizes"></b></span></div>
@@ -33,6 +33,7 @@
   <div class="row dim"><label>Seed <input id="seed"></label><button id="useSeed">Use seed</button></div>
   <div class="dim" id="log"></div>
 </main>
+<script src="version.js"></script>
 <script src="engine.js"></script>
 <script>
 (() => {
@@ -246,6 +247,7 @@
     save(load() - BALL_COST); balls++; ui();
     say('Took a ball from your stash. If it drains, it is gone.', 'gold');
   };
+  $('ver').textContent = 'v' + window.BALL_RAIDERS_VERSION;
   memStash = load();
   newRun();
 })();

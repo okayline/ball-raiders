@@ -72,3 +72,9 @@ test('the weakest powers are foul balls; stronger shots clear the rail', () => {
   assert.ok(B.launch(0).foul);
   assert.ok(!B.launch(B.AIMS - 1).foul);
 });
+
+test('the version on the page matches the newest CHANGELOG entry', () => {
+  require('../public/version.js');
+  const top = require('fs').readFileSync(__dirname + '/../CHANGELOG.md', 'utf8').match(/^## v(\S+)/m)[1];
+  assert.strictEqual(globalThis.BALL_RAIDERS_VERSION, top);
+});

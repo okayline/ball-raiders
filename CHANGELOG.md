@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.3
+- Added: the version number next to the title, so you can tell when your browser has the newest build.
+- Removed: nothing.
+
 ## v0.3.2
 - Changed: the ball moves at a quarter of the speed, so you can follow it.
 - Removed: the old fast playback.
