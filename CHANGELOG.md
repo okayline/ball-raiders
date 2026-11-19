@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.2
+- Changed: the ball moves at a quarter of the speed, so you can follow it.
+- Removed: the old fast playback.
+
 ## v0.3.1
 - Added: Cloudflare Worker settings so the game is served from `public/`.
 - Removed: nothing.

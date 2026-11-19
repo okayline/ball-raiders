@@ -40,6 +40,7 @@
   const cv = document.getElementById('c'), cx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
   const BALL_COST = 100;  // one whole ball from the stash
+  const SPEED = 0.75;     // how fast the ball plays back (was 3; kura asked for 1/4)
   const STORE = 'ball-raiders-stash';
 
   function load() { try { return Number(localStorage.getItem(STORE)) || 0; } catch (e) { return memStash; } }
@@ -186,11 +187,11 @@
     const result = B.dropBall(machine, aim, state, f => frames.push(f));
     ui();
     const step = () => {
-      for (let k = 0; k < 3 && fi < frames.length - 1; k++) fi++;
-      const f = frames[fi];
+      fi = Math.min(frames.length - 1, fi + SPEED);   // physics ticks shown per screen frame
+      const f = frames[Math.floor(fi)];
       draw(f.board, f);
       $('carry').textContent = B.money(f.bips);
-      if (fi < frames.length - 1) return requestAnimationFrame(step);
+      if (Math.floor(fi) < frames.length - 1) return requestAnimationFrame(step);
       finish(result);
     };
     requestAnimationFrame(step);
