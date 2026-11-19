@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BALL RAIDERS</title>
+<style>
+  body { margin: 0; background: #0b0d12; color: #e6e8ef; font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; display: flex; justify-content: center; }
+  main { width: 360px; padding: 12px 0 24px; }
+  h1 { font-size: 18px; margin: 0 0 6px; letter-spacing: 2px; }
+  .row { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0; }
+  .dim { color: #8a90a2; }
+  canvas { display: block; background: #12151d; border: 1px solid #2a2f3d; cursor: crosshair; touch-action: none; }
+  button { background: #1d2230; color: #e6e8ef; border: 1px solid #3a4152; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  input { background: #12151d; color: #e6e8ef; border: 1px solid #3a4152; font: inherit; padding: 5px; width: 120px; }
+  #msg { min-height: 20px; margin: 6px 0; }
+  .bank { color: #6be08a; } .trap { color: #ff6b6b; } .gold { color: #ffd166; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BALL RAIDERS</h1>
+  <div class="row"><span>Stash <b id="stash" class="gold"></b></span><span>Balls <b id="balls"></b></span></div>
+  <div class="row"><span>Carrying <b id="carry">-</b></span><span>Banked this run <b id="runBank"></b></span></div>
+  <div class="row dim"><span>Board <b id="boardNo">1</b>/3</span><span>Prize hole next: <b id="prizes"></b></span></div>
+  <canvas id="c" width="360" height="480"></canvas>
+  <div id="msg" class="dim">Move to aim, click to drop. BANK keeps the loot. DOWN goes deeper: more loot, hidden traps.</div>
+  <div class="row">
+    <button id="newRun">New run</button>
+    <button id="buy">+1 ball (<span id="cost"></span>)</button>
+  </div>
+  <div class="row dim"><label>Seed <input id="seed"></label><button id="useSeed">Use seed</button></div>
+  <div class="dim" id="log"></div>
+</main>
+<script src="engine.js"></script>
+<script>
+(() => {
+  const B = window.BallRaiders;
+  const cv = document.getElementById('c'), cx = cv.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const BALL_COST = 50;   // units of stash per extra ball
+  const STORE = 'ball-raiders-stash';
+
+  function load() { try { return Number(localStorage.getItem(STORE)) || 0; } catch (e) { return memStash; } }
+  function save(v) { memStash = v; try { localStorage.setItem(STORE, String(v)); } catch (e) {} }
+  let memStash = 0;
+
+  let machine, state, balls, runBank, aims, aim = 16, playing = false, frames = [], fi = 0, extra = 0;
+
+  function randomSeed() {
+    const a = new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return a[0].toString(36);
+  }
+
+  function newRun(seed) {
+    machine = B.makeMachine(seed || randomSeed());
+    state = { prizeIndex: 0, revealed: new Set() };
+    balls = 3 + extra; extra = 0;
+    runBank = 0; aims = [];
+    $('seed').value = machine.seed;
+    say('New run. Seed ' + machine.seed + '. Same seed = same machine, every time.', 'dim');
+    $('log').textContent = '';
+    ui(); draw(0, null);
+  }
+
+  function ui() {
+    $('stash').textContent = B.money(load());
+    $('balls').textContent = balls;
+    $('runBank').textContent = B.money(runBank);
+    $('cost').textContent = B.money(BALL_COST);
+    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
+    $('prizes').innerHTML = next.map(p => p === 'TRAP' ? '<span class="trap">TRAP</span>' : p).join(' → ') + ' → ?';
+    $('buy').disabled = playing || load() < BALL_COST;
+    $('newRun').disabled = playing;
+  }
+
+  function say(text, cls) { const m = $('msg'); m.textContent = text; m.className = cls || ''; }
+
+  function draw(board, f) {
+    const b = machine.boards[board];
+    cx.clearRect(0, 0, B.W, B.H);
+    // slots
+    const sw = B.W / B.SLOTS;
+    b.slots.forEach((k, i) => {
+      cx.fillStyle = k === 'BANK' ? '#163a24' : '#2a2140';
+      cx.fillRect(i * sw + 1, B.SLOT_Y, sw - 2, B.H - B.SLOT_Y);
+      cx.fillStyle = k === 'BANK' ? '#6be08a' : '#b39dff';
+      cx.font = '11px monospace'; cx.textAlign = 'center';
+      cx.fillText(k, i * sw + sw / 2, B.H - 8);
+    });
+    // hole
+    if (board === 1) {
+      cx.strokeStyle = '#ffd166'; cx.lineWidth = 2;
+      cx.beginPath(); cx.arc(B.HOLE.x, B.HOLE.y, B.HOLE.r, 0, 7); cx.stroke();
+    }
+    // pegs (traps are hidden until one has been hit this run)
+    b.pegs.forEach((p, i) => {
+      const shown = p.trap && state.revealed.has(board + ':' + i);
+      cx.fillStyle = shown ? '#ff6b6b' : '#7c8399';
+      cx.beginPath(); cx.arc(p.x, p.y, B.PEG_R, 0, 7); cx.fill();
+    });
+    // aim marker
+    if (!playing) {
+      cx.fillStyle = '#ffd166';
+      cx.beginPath(); cx.arc(B.aimX(aim), 12, B.BALL_R, 0, 7); cx.fill();
+    }
+    if (f) {
+      cx.fillStyle = f.done === 'trap' ? '#ff6b6b' : '#e6e8ef';
+      cx.beginPath(); cx.arc(f.x, f.y, B.BALL_R, 0, 7); cx.fill();
+    }
+    cx.fillStyle = '#8a90a2'; cx.textAlign = 'left'; cx.font = '11px monospace';
+    cx.fillText('B' + (board + 1) + '  ' + B.money(B.BIPS[board]) + '/bump', 6, 40);
+    $('boardNo').textContent = board + 1;
+  }
+
+  function drop() {
+    if (playing || balls <= 0) return;
+    playing = true; balls--; aims.push(aim); frames = []; fi = 0;
+    const result = B.dropBall(machine, aim, state, f => frames.push(f));
+    ui();
+    const step = () => {
+      for (let k = 0; k < 3 && fi < frames.length - 1; k++) fi++;
+      const f = frames[fi];
+      draw(f.board, f);
+      $('carry').textContent = B.money(f.bips);
+      if (fi < frames.length - 1) return requestAnimationFrame(step);
+      finish(result);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function finish(r) {
+    playing = false;
+    if (r.result === 'BANK') {
+      runBank += r.bips; save(load() + r.bips);
+      say('Banked ' + B.money(r.bips) + ' on board ' + (r.board + 1) + '.', 'bank');
+    } else {
+      say((r.prize === 'TRAP' ? 'The prize hole was a TRAP. ' : 'Hit a trap. ') + 'Lost ' + B.money(r.lost) + '.', 'trap');
+    }
+    $('carry').textContent = '-';
+    $('log').textContent = 'Aims so far: ' + aims.join(', ') + ' (seed ' + machine.seed + ' + these aims replays this run exactly)';
+    if (balls <= 0) say($('msg').textContent + ' Run over: ' + B.money(runBank) + ' banked.', $('msg').className);
+    ui(); draw(0, null);
+  }
+
+  function aimFrom(e) {
+    const rect = cv.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * B.W;
+    aim = Math.max(0, Math.min(B.AIMS - 1, Math.round(((x - 14) / (B.W - 28)) * (B.AIMS - 1))));
+    if (!playing) draw(0, null);
+  }
+  cv.addEventListener('pointermove', aimFrom);
+  cv.addEventListener('pointerdown', e => { aimFrom(e); drop(); });
+  $('newRun').onclick = () => newRun();
+  $('useSeed').onclick = () => newRun($('seed').value.trim() || undefined);
+  $('buy').onclick = () => {
+    if (load() < BALL_COST) return;
+    save(load() - BALL_COST); balls++; ui();
+    say('Bought a ball. If it drains, the stash you spent is gone.', 'gold');
+  };
+  memStash = load();
+  newRun();
+})();
+</script>
+</body>
+</html>

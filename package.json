@@ -1,0 +1,5 @@
+{
+  "name": "ball-raiders",
+  "private": true,
+  "scripts": { "test": "node --test test/*.test.js" }
+}
