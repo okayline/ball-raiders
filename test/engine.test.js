@@ -12,7 +12,8 @@ test('same seed and aims give the same run', () => {
 
 test('different seeds give different machines', () => {
   const m1 = B.makeMachine('a'), m2 = B.makeMachine('b');
-  assert.notDeepStrictEqual(m1.boards[0].pegs, m2.boards[0].pegs);
+  assert.notDeepStrictEqual(m1.boards[1].pegs, m2.boards[1].pegs);
+  assert.deepStrictEqual(m1.boards[0].pegs, m2.boards[0].pegs); // board 1 is the fixed traced layout
 });
 
 test('board 1 has no traps, boards 2 and 3 have some', () => {
@@ -22,10 +23,12 @@ test('board 1 has no traps, boards 2 and 3 have some', () => {
   assert.ok(m.boards[2].pegs.some(p => p.trap));
 });
 
-test('boards 1-2 have a BANK and a DOWN slot; board 3 is all BANK', () => {
+test('board 1 has BANK, DOWN and START pockets; board 2 has BANK and DOWN slots; board 3 is all BANK', () => {
+  const kinds = B.makeMachine('a').boards[0].pockets.map(p => p.kind);
+  for (const k of ['BANK', 'DOWN', 'PRIZE']) assert.ok(kinds.includes(k));
   for (const seed of ['a', 'b', 'c', 'd', 'e']) {
     const m = B.makeMachine(seed);
-    for (const b of [0, 1]) {
+    for (const b of [1]) {
       assert.ok(m.boards[b].slots.includes('BANK'));
       assert.ok(m.boards[b].slots.includes('DOWN'));
     }
@@ -33,9 +36,9 @@ test('boards 1-2 have a BANK and a DOWN slot; board 3 is all BANK', () => {
   }
 });
 
-test('money shows 6 decimals', () => {
-  assert.strictEqual(B.money(1), '0.000001 BALL');
-  assert.strictEqual(B.money(1234567), '1.234567 BALL');
+test('loot shows as parts of a ball', () => {
+  assert.strictEqual(B.money(1), '0.01 balls');
+  assert.strictEqual(B.money(250), '2.50 balls');
 });
 
 test('a trap loses the ball and what it carried', () => {

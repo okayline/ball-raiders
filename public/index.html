@@ -25,10 +25,10 @@
   <div class="row"><span>Carrying <b id="carry">-</b></span><span>Banked this run <b id="runBank"></b></span></div>
   <div class="row dim"><span>Board <b id="boardNo">1</b>/3</span><span>Prize hole next: <b id="prizes"></b></span></div>
   <canvas id="c" width="360" height="480"></canvas>
-  <div id="msg" class="dim">Move to aim, click to drop. BANK keeps the loot. DOWN goes deeper: more loot, hidden traps.</div>
+  <div id="msg" class="dim">Move to aim, click to drop. Each bump builds part of a new ball. BANK keeps it. DOWN goes deeper: more parts, hidden traps.</div>
   <div class="row">
     <button id="newRun">New run</button>
-    <button id="buy">+1 ball (<span id="cost"></span>)</button>
+    <button id="buy">Use 1 stashed ball</button>
   </div>
   <div class="row dim"><label>Seed <input id="seed"></label><button id="useSeed">Use seed</button></div>
   <div class="dim" id="log"></div>
@@ -39,7 +39,7 @@
   const B = window.BallRaiders;
   const cv = document.getElementById('c'), cx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
-  const BALL_COST = 50;   // units of stash per extra ball
+  const BALL_COST = 100;  // one whole ball from the stash
   const STORE = 'ball-raiders-stash';
 
   function load() { try { return Number(localStorage.getItem(STORE)) || 0; } catch (e) { return memStash; } }
@@ -69,8 +69,7 @@
     $('stash').textContent = B.money(load());
     $('balls').textContent = balls;
     $('runBank').textContent = B.money(runBank);
-    $('cost').textContent = B.money(BALL_COST);
-    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
+        const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
     $('prizes').innerHTML = next.map(p => p === 'TRAP' ? '<span class="trap">TRAP</span>' : p).join(' → ') + ' → ?';
     $('buy').disabled = playing || load() < BALL_COST;
     $('newRun').disabled = playing;
@@ -81,6 +80,7 @@
   function draw(board, f) {
     const b = machine.boards[board];
     cx.clearRect(0, 0, B.W, B.H);
+    if (b.round) return drawRound(b, f);
     // slots
     const sw = B.W / B.SLOTS;
     b.slots.forEach((k, i) => {
@@ -113,6 +113,44 @@
     cx.fillStyle = '#8a90a2'; cx.textAlign = 'left'; cx.font = '11px monospace';
     cx.fillText('B' + (board + 1) + '  ' + B.money(B.BIPS[board]) + '/bump', 6, 40);
     $('boardNo').textContent = board + 1;
+  }
+
+  function drawRound(b, f) {
+    const R = b.round;
+    cx.fillStyle = '#1a1f2c'; cx.beginPath(); cx.arc(R.cx, R.cy, R.r, 0, 7); cx.fill();
+    cx.strokeStyle = '#9aa3b8'; cx.lineWidth = 6; cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 3, 0, 7); cx.stroke();
+    // the screen: shows the prize line
+    const sc = b.screen;
+    cx.fillStyle = '#0e1a14'; cx.fillRect(sc.x, sc.y, sc.w, sc.h);
+    cx.strokeStyle = '#6be08a'; cx.lineWidth = 2; cx.strokeRect(sc.x, sc.y, sc.w, sc.h);
+    cx.fillStyle = '#6be08a'; cx.font = '11px monospace'; cx.textAlign = 'center';
+    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
+    cx.fillText('next prizes', sc.x + sc.w / 2, sc.y + 22);
+    cx.font = '15px monospace';
+    cx.fillText(next.join('  ') + '  ?', sc.x + sc.w / 2, sc.y + 46);
+    // walls (screen outline, floor under the top hole, rails) and the closed gate
+    cx.strokeStyle = '#4a5268'; cx.lineWidth = 2;
+    b.walls.forEach(w => { cx.beginPath(); cx.moveTo(w.x1, w.y1); cx.lineTo(w.x2, w.y2); cx.stroke(); });
+    cx.fillStyle = '#ffd166'; cx.fillRect(b.gate.x, b.gate.y, b.gate.w, b.gate.h);
+    cx.font = '9px monospace'; cx.fillText('OPEN (closed for now)', b.gate.x + b.gate.w / 2, b.gate.y + 16);
+    // pockets
+    b.pockets.forEach(p => {
+      cx.fillStyle = p.kind === 'BANK' ? '#163a24' : p.kind === 'DOWN' ? '#2a2140' : '#3a2f10';
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
+      cx.fillStyle = p.kind === 'BANK' ? '#6be08a' : p.kind === 'DOWN' ? '#b39dff' : '#ffd166';
+      cx.font = '8px monospace'; cx.fillText(p.kind === 'PRIZE' ? 'START' : p.kind, p.x, p.y + p.r + 9);
+    });
+    // nails and windmills
+    b.pegs.forEach(p => {
+      cx.fillStyle = p.windmill ? '#c9a227' : '#b8bccb';
+      cx.beginPath(); cx.arc(p.x, p.y, p.r || B.PEG_R * 0.7, 0, 7); cx.fill();
+    });
+    cx.fillStyle = '#8a90a2'; cx.textAlign = 'left'; cx.font = '11px monospace';
+    cx.fillText('B1  ' + B.money(B.BIPS[0]) + '/bump', 6, 16);
+    cx.fillText('miss everything = down to board 2', 6, B.H - 8);
+    if (!playing) { cx.fillStyle = '#ffd166'; cx.beginPath(); cx.arc(B.aimX(aim, true), R.cy - R.r + 24, B.BALL_R, 0, 7); cx.fill(); }
+    if (f) { cx.fillStyle = f.done === 'trap' ? '#ff6b6b' : '#e6e8ef'; cx.beginPath(); cx.arc(f.x, f.y, B.BALL_R, 0, 7); cx.fill(); }
+    $('boardNo').textContent = 1;
   }
 
   function drop() {
@@ -148,7 +186,8 @@
   function aimFrom(e) {
     const rect = cv.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * B.W;
-    aim = Math.max(0, Math.min(B.AIMS - 1, Math.round(((x - 14) / (B.W - 28)) * (B.AIMS - 1))));
+    const lo = B.aimX(0, true), hi = B.aimX(B.AIMS - 1, true);
+    aim = Math.max(0, Math.min(B.AIMS - 1, Math.round(((x - lo) / (hi - lo)) * (B.AIMS - 1))));
     if (!playing) draw(0, null);
   }
   cv.addEventListener('pointermove', aimFrom);
@@ -158,7 +197,7 @@
   $('buy').onclick = () => {
     if (load() < BALL_COST) return;
     save(load() - BALL_COST); balls++; ui();
-    say('Bought a ball. If it drains, the stash you spent is gone.', 'gold');
+    say('Took a ball from your stash. If it drains, it is gone.', 'gold');
   };
   memStash = load();
   newRun();
