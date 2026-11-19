@@ -5,33 +5,165 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BALL RAIDERS</title>
 <style>
-  body { margin: 0; background: #0b0d12; color: #e6e8ef; font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; display: flex; justify-content: center; }
-  main { width: 360px; padding: 12px 0 24px; }
-  h1 { font-size: 18px; margin: 0 0 6px; letter-spacing: 2px; }
-  .row { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0; }
-  .dim { color: #8a90a2; }
-  canvas { display: block; background: #12151d; border: 1px solid #2a2f3d; cursor: crosshair; touch-action: none; }
-  button { background: #1d2230; color: #e6e8ef; border: 1px solid #3a4152; padding: 6px 10px; font: inherit; cursor: pointer; }
-  button:disabled { opacity: .4; cursor: default; }
-  input { background: #12151d; color: #e6e8ef; border: 1px solid #3a4152; font: inherit; padding: 5px; width: 120px; }
-  #msg { min-height: 20px; margin: 6px 0; }
-  .bank { color: #6be08a; } .trap { color: #ff6b6b; } .gold { color: #ffd166; }
+  :root {
+    --silver-hi: #eef2f6;
+    --silver: #bcc4cf;
+    --silver-lo: #7b8494;
+    --navy-dark: #182347;
+    --navy: #24366b;
+    --teal: #1ca68e;
+    --teal-dark: #126b5c;
+    --magenta: #e0438b;
+    --gold: #ffd166;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #242b42 0%, #0b0e16 70%);
+    color: #f1f4fa;
+    font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .cabinet {
+    width: 392px;
+    margin: 12px 0 28px;
+    padding: 12px 14px 16px;
+    border-radius: 22px 22px 18px 18px;
+    background: linear-gradient(165deg, var(--silver-hi) 0%, var(--silver) 42%, var(--silver-lo) 100%);
+    border: 2px solid #dfe5ee;
+    box-shadow:
+      0 14px 36px rgba(0, 0, 0, .65),
+      inset 0 2px 3px rgba(255, 255, 255, .8),
+      inset 0 -3px 6px rgba(24, 35, 71, .45);
+    color: #eef2f8;
+  }
+  .header-deck {
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-dark) 100%);
+    border-radius: 14px 14px 10px 10px;
+    padding: 8px 10px 7px;
+    border: 2px solid #495d96;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+    margin-bottom: 8px;
+  }
+  .top-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+  }
+  h1 {
+    font-size: 17px;
+    margin: 0;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow: 0 2px 0 #0d1328, 0 0 10px rgba(28, 166, 142, .45);
+  }
+  .light-strip {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .lamp {
+    width: 18px;
+    height: 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.45);
+  }
+  .lamp.pink { background: linear-gradient(90deg, #ff69b4, #d62872); box-shadow: 0 0 6px rgba(255,105,180,.7); }
+  .lamp.teal { background: linear-gradient(90deg, #4ef2d2, #178c77); box-shadow: 0 0 6px rgba(78,242,210,.65); }
+  .lamp.gold { background: linear-gradient(90deg, #ffe58f, #e59a1c); box-shadow: 0 0 6px rgba(255,209,102,.65); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 3px 0; }
+  .dim { color: #b7c2dc; }
+  .bezel {
+    padding: 4px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #2d3e75 0%, #141d3b 100%);
+    border: 2px solid #8a94a6;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, .75);
+  }
+  canvas {
+    display: block;
+    width: 360px;
+    height: 480px;
+    border-radius: 6px;
+    background: #1c2238;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  button {
+    background: linear-gradient(180deg, #2b3f7a 0%, #182346 100%);
+    color: #f4f7fc;
+    border: 1px solid #6f84bf;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 2px 0 #0b1021;
+  }
+  button:hover:not(:disabled) { border-color: var(--gold); color: #fff; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .42; cursor: default; }
+  input {
+    background: #10172b;
+    color: #f1f4fa;
+    border: 1px solid #5c6fa6;
+    border-radius: 5px;
+    font: inherit;
+    padding: 5px 7px;
+    width: 120px;
+  }
+  #msg {
+    min-height: 28px;
+    margin: 8px 0 6px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: rgba(16, 23, 43, .82);
+    border: 1px solid rgba(255, 255, 255, .14);
+    font-size: 12px;
+  }
+  #log { margin-top: 6px; font-size: 11px; color: #24304c; font-weight: 600; }
+  .controls-deck { margin-top: 6px; }
+  .seed-row { color: #1b2438; font-weight: 600; margin-top: 6px; }
+  .bank { color: #6be08a; }
+  .trap { color: #ff6b6b; }
+  .gold { color: #ffd166; }
 </style>
 </head>
 <body>
-<main>
-  <h1>BALL RAIDERS <small id="ver" class="dim" style="font-size:11px;letter-spacing:0"></small></h1>
-  <div class="row"><span>Stash <b id="stash" class="gold"></b></span><span>Balls <b id="balls"></b></span></div>
-  <div class="row"><span>Carrying <b id="carry">-</b></span><span>Banked this run <b id="runBank"></b></span></div>
-  <div class="row dim"><span>Board <b id="boardNo">1</b>/3</span><span>Prize hole next: <b id="prizes"></b></span></div>
-  <canvas id="c" width="360" height="480"></canvas>
-  <div id="msg" class="dim">Turn the handle (drag it up or down, scroll, or arrow keys), then tap it or press space to shoot. Each bump builds part of a new ball. BANK keeps it; going down risks it for more.</div>
-  <div class="row">
-    <button id="newRun">New run</button>
-    <button id="buy">Use 1 stashed ball</button>
+<main class="cabinet">
+  <div class="header-deck">
+    <div class="top-bar">
+      <h1>BALL RAIDERS <small id="ver" class="dim" style="font-size:10px;letter-spacing:0"></small></h1>
+      <div class="light-strip" aria-hidden="true">
+        <span class="lamp pink"></span>
+        <span class="lamp teal"></span>
+        <span class="lamp gold"></span>
+      </div>
+    </div>
+    <div class="row"><span>Stash <b id="stash" class="gold"></b></span><span>Balls <b id="balls"></b></span></div>
+    <div class="row"><span>Carrying <b id="carry">-</b></span><span>Banked this run <b id="runBank"></b></span></div>
+    <div class="row dim"><span>Board <b id="boardNo">1</b>/3</span><span>Prize hole next: <b id="prizes"></b></span></div>
   </div>
-  <div class="row dim"><label>Seed <input id="seed"></label><button id="useSeed">Use seed</button></div>
-  <div class="dim" id="log"></div>
+
+  <div class="bezel">
+    <canvas id="c" width="360" height="480"></canvas>
+  </div>
+
+  <div id="msg" class="dim">Turn the handle (drag it up or down, scroll, or arrow keys), then tap it or press space to shoot. Each bump builds part of a new ball. BANK keeps it; going down risks it for more.</div>
+
+  <div class="controls-deck">
+    <div class="row">
+      <button id="newRun">New run</button>
+      <button id="buy">Use 1 stashed ball</button>
+    </div>
+    <div class="row seed-row"><label>Seed <input id="seed"></label><button id="useSeed">Use seed</button></div>
+    <div id="log"></div>
+  </div>
 </main>
 <script src="version.js"></script>
 <script src="engine.js"></script>
@@ -40,8 +172,8 @@
   const B = window.BallRaiders;
   const cv = document.getElementById('c'), cx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
-  const BALL_COST = 100;  // one whole ball from the stash
-  const SPEED = 0.75;     // how fast the ball plays back (was 3; kura asked for 1/4)
+  const BALL_COST = 100;
+  const SPEED = 1;
   const STORE = 'ball-raiders-stash';
 
   function load() { try { return Number(localStorage.getItem(STORE)) || 0; } catch (e) { return memStash; } }
@@ -71,7 +203,7 @@
     $('stash').textContent = B.money(load());
     $('balls').textContent = balls;
     $('runBank').textContent = B.money(runBank);
-        const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
+    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
     $('prizes').innerHTML = next.map(p => p === 'TRAP' ? '<span class="trap">TRAP</span>' : p).join(' → ') + ' → ?';
     $('buy').disabled = playing || load() < BALL_COST;
     $('newRun').disabled = playing;
@@ -79,106 +211,238 @@
 
   function say(text, cls) { const m = $('msg'); m.textContent = text; m.className = cls || ''; }
 
+  function drawBall(x, y, fill, stroke) {
+    cx.fillStyle = fill || '#eef2fa';
+    cx.beginPath(); cx.arc(x, y, B.BALL_R, 0, 7); cx.fill();
+    cx.strokeStyle = stroke || '#283354'; cx.lineWidth = 1.2; cx.stroke();
+    cx.fillStyle = 'rgba(255,255,255,.75)';
+    cx.beginPath(); cx.arc(x - 1.6, y - 1.6, 1.4, 0, 7); cx.fill();
+  }
+
   function draw(board, f) {
     const b = machine.boards[board];
     cx.clearRect(0, 0, B.W, B.H);
     if (b.round) return drawRound(b, f);
-    // slots
+
+    // Lower board backdrop
+    const bg = cx.createLinearGradient(0, 0, 0, B.H);
+    bg.addColorStop(0, '#1e2747');
+    bg.addColorStop(1, '#12182e');
+    cx.fillStyle = bg;
+    cx.fillRect(0, 0, B.W, B.H);
+
+    // Slots
     const sw = B.W / B.SLOTS;
     b.slots.forEach((k, i) => {
-      cx.fillStyle = k === 'BANK' ? '#163a24' : '#2a2140';
-      cx.fillRect(i * sw + 1, B.SLOT_Y, sw - 2, B.H - B.SLOT_Y);
-      cx.fillStyle = k === 'BANK' ? '#6be08a' : '#b39dff';
-      cx.font = '11px monospace'; cx.textAlign = 'center';
+      const isBank = k === 'BANK';
+      cx.fillStyle = isBank ? '#174734' : '#2c2254';
+      cx.fillRect(i * sw + 2, B.SLOT_Y, sw - 4, B.H - B.SLOT_Y - 2);
+      cx.strokeStyle = isBank ? '#45d494' : '#9c82ff';
+      cx.lineWidth = 1.5;
+      cx.strokeRect(i * sw + 2, B.SLOT_Y, sw - 4, B.H - B.SLOT_Y - 2);
+      cx.fillStyle = isBank ? '#85f2bd' : '#cbbaff';
+      cx.font = 'bold 11px monospace'; cx.textAlign = 'center';
       cx.fillText(k, i * sw + sw / 2, B.H - 8);
     });
-    // hole
+
+    // Prize hole on board 2
     if (board === 1) {
-      cx.strokeStyle = '#ffd166'; cx.lineWidth = 2;
+      cx.strokeStyle = '#ffd166'; cx.lineWidth = 2.5;
       cx.beginPath(); cx.arc(B.HOLE.x, B.HOLE.y, B.HOLE.r, 0, 7); cx.stroke();
+      cx.fillStyle = 'rgba(255, 209, 102, .16)';
+      cx.beginPath(); cx.arc(B.HOLE.x, B.HOLE.y, B.HOLE.r - 2, 0, 7); cx.fill();
     }
-    // pegs (traps are hidden until one has been hit this run)
+
+    // Pegs
     b.pegs.forEach((p, i) => {
       const shown = p.trap && state.revealed.has(board + ':' + i);
-      cx.fillStyle = shown ? '#ff6b6b' : '#7c8399';
+      cx.fillStyle = shown ? '#ff5c5c' : '#9aa6c4';
       cx.beginPath(); cx.arc(p.x, p.y, B.PEG_R, 0, 7); cx.fill();
+      cx.strokeStyle = shown ? '#ffd1d1' : '#2d3756';
+      cx.lineWidth = 1; cx.stroke();
     });
-    // aim marker
+
     if (!playing) {
-      cx.fillStyle = '#ffd166';
-      cx.beginPath(); cx.arc(B.aimX(aim), 12, B.BALL_R, 0, 7); cx.fill();
+      drawBall(B.aimX(aim), 12, '#ffd166', '#5e4308');
     }
     if (f) {
-      cx.fillStyle = f.done === 'trap' ? '#ff6b6b' : '#e6e8ef';
-      cx.beginPath(); cx.arc(f.x, f.y, B.BALL_R, 0, 7); cx.fill();
+      drawBall(f.x, f.y, f.done === 'trap' ? '#ff6b6b' : '#f4f7fc', '#1d2747');
     }
-    cx.fillStyle = '#8a90a2'; cx.textAlign = 'left'; cx.font = '11px monospace';
-    cx.fillText('B' + (board + 1) + '  ' + B.money(B.BIPS[board]) + '/bump', 6, 40);
+
+    cx.fillStyle = '#c4d0ec'; cx.textAlign = 'left'; cx.font = '11px monospace';
+    cx.fillText('B' + (board + 1) + '  ' + B.money(B.BIPS[board]) + '/bump', 8, 22);
     $('boardNo').textContent = board + 1;
   }
 
   const KNOB = { x: 322, y: 446, r: 20 };
+
   function drawCabinet(R) {
-    cx.fillStyle = '#5b6170'; cx.fillRect(0, 0, B.W, B.H);           // the cabinet face
-    cx.fillStyle = '#2b3350'; cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 14, 0, 7); cx.fill();
-    // the launch rail: up the right side, over the top
-    cx.strokeStyle = '#c9ced9'; cx.lineWidth = 2;
+    // Brushed metallic & deep navy outer surround
+    const face = cx.createLinearGradient(0, 0, B.W, B.H);
+    face.addColorStop(0, '#737d91');
+    face.addColorStop(0.5, '#545c6e');
+    face.addColorStop(1, '#3d4454');
+    cx.fillStyle = face;
+    cx.fillRect(0, 0, B.W, B.H);
+
+    // Side & top curved light-bar accents (90s cabinet trim)
+    cx.strokeStyle = '#1fa68e'; cx.lineWidth = 5;
+    cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 17, -Math.PI * 0.78, -Math.PI * 0.22); cx.stroke();
+    cx.strokeStyle = '#df4588'; cx.lineWidth = 4;
+    cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 22, -Math.PI * 0.68, -Math.PI * 0.32); cx.stroke();
+
+    // Navy backing ring
+    cx.fillStyle = '#223161';
+    cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 14, 0, 7); cx.fill();
+
+    // Launch rail
+    cx.strokeStyle = '#d4dbe8'; cx.lineWidth = 2.5;
     cx.beginPath(); cx.arc(R.cx, R.cy, B.RAIL_R + 6, -Math.PI * 0.62, Math.PI * 0.22); cx.stroke();
-    // the tray: balls you have left
-    cx.fillStyle = '#1f8f86'; cx.fillRect(24, 428, 210, 40);
-    cx.fillStyle = '#16655f'; cx.fillRect(30, 434, 198, 28);
+
+    // Lower curved teal & navy ball tray
+    cx.fillStyle = '#1b2852';
+    cx.beginPath(); cx.roundRect(18, 422, 222, 50, 12); cx.fill();
+    cx.fillStyle = '#1ea38b';
+    cx.beginPath(); cx.roundRect(24, 428, 210, 40, 9); cx.fill();
+    cx.fillStyle = '#125c4f';
+    cx.fillRect(30, 434, 198, 28);
     for (let i = 0; i < Math.min(balls, 16); i++) {
-      cx.fillStyle = '#d7dbe6'; cx.beginPath(); cx.arc(40 + i * 12, 448, 5, 0, 7); cx.fill();
+      drawBall(40 + i * 12, 448, '#e3e8f2', '#17223d');
     }
-    cx.fillStyle = '#9fe6dc'; cx.font = '9px monospace'; cx.textAlign = 'left';
-    cx.fillText('tray', 30, 425);
-    // the handle: turn it for a harder shot
-    cx.fillStyle = '#1f8f86'; cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 6, 0, 7); cx.fill();
-    cx.fillStyle = '#23305c'; cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r, 0, 7); cx.fill();
+    cx.fillStyle = '#a8f2e4'; cx.font = 'bold 9px monospace'; cx.textAlign = 'left';
+    cx.fillText('TRAY', 30, 425);
+
+    // Rotary power handle (teal collar + navy grip)
+    cx.fillStyle = '#1ea38b';
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 7, 0, 7); cx.fill();
+    cx.fillStyle = '#1c2954';
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r, 0, 7); cx.fill();
+    cx.strokeStyle = '#7de8d4'; cx.lineWidth = 1.5; cx.stroke();
+
     const a0 = Math.PI * 0.75, a1 = a0 + Math.PI * 1.5 * (aim / (B.AIMS - 1));
     cx.strokeStyle = '#ffd166'; cx.lineWidth = 3;
-    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 3, a0, a1); cx.stroke();
-    cx.strokeStyle = '#e6e8ef'; cx.lineWidth = 2;
-    cx.beginPath(); cx.moveTo(KNOB.x, KNOB.y); cx.lineTo(KNOB.x + Math.cos(a1) * (KNOB.r - 4), KNOB.y + Math.sin(a1) * (KNOB.r - 4)); cx.stroke();
-    cx.fillStyle = '#e6e8ef'; cx.font = '9px monospace'; cx.textAlign = 'center';
-    cx.fillText('power ' + Math.round((aim / (B.AIMS - 1)) * 100) + '%', KNOB.x - 4, 412);
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 3.5, a0, a1); cx.stroke();
+
+    cx.strokeStyle = '#f4f7fc'; cx.lineWidth = 2.2;
+    cx.beginPath();
+    cx.moveTo(KNOB.x, KNOB.y);
+    cx.lineTo(KNOB.x + Math.cos(a1) * (KNOB.r - 4), KNOB.y + Math.sin(a1) * (KNOB.r - 4));
+    cx.stroke();
+
+    cx.fillStyle = '#f4f7fc'; cx.font = 'bold 9px monospace'; cx.textAlign = 'center';
+    cx.fillText('POWER ' + Math.round((aim / (B.AIMS - 1)) * 100) + '%', KNOB.x - 4, 412);
+  }
+
+  function drawJaggedScreenFrame(sc) {
+    const pad = 7, x0 = sc.x - pad, y0 = sc.y - pad, w0 = sc.w + pad * 2, h0 = sc.h + pad * 2;
+    const teeth = 10, toothStep = w0 / teeth;
+
+    // Outer magenta & gold jagged comic trim
+    cx.save();
+    cx.beginPath();
+    for (let i = 0; i <= teeth; i++) {
+      const tx = x0 + i * toothStep;
+      const ty = y0 - (i % 2 === 0 ? 4 : 0);
+      if (i === 0) cx.moveTo(tx, ty); else cx.lineTo(tx, ty);
+    }
+    cx.lineTo(x0 + w0 + 3, y0 + h0 * 0.5);
+    cx.lineTo(x0 + w0, y0 + h0 + 3);
+    for (let i = teeth; i >= 0; i--) {
+      const tx = x0 + i * toothStep;
+      const ty = y0 + h0 + (i % 2 === 0 ? 4 : 0);
+      cx.lineTo(tx, ty);
+    }
+    cx.lineTo(x0 - 3, y0 + h0 * 0.5);
+    cx.closePath();
+    cx.fillStyle = '#df4588';
+    cx.fill();
+    cx.strokeStyle = '#ffd166';
+    cx.lineWidth = 1.8;
+    cx.stroke();
+
+    // Inner lime-green arcade border
+    cx.fillStyle = '#53d16b';
+    cx.fillRect(sc.x - 3, sc.y - 3, sc.w + 6, sc.h + 6);
+    cx.restore();
   }
 
   function drawRound(b, f) {
     const R = b.round;
     drawCabinet(R);
-    cx.fillStyle = '#1a1f2c'; cx.beginPath(); cx.arc(R.cx, R.cy, R.r, 0, 7); cx.fill();
-    cx.strokeStyle = '#9aa3b8'; cx.lineWidth = 6; cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 3, 0, 7); cx.stroke();
-    // the screen: shows the prize line
-    const sc = b.screen;
-    cx.fillStyle = '#0e1a14'; cx.fillRect(sc.x, sc.y, sc.w, sc.h);
-    cx.strokeStyle = '#6be08a'; cx.lineWidth = 2; cx.strokeRect(sc.x, sc.y, sc.w, sc.h);
-    cx.fillStyle = '#6be08a'; cx.font = '11px monospace'; cx.textAlign = 'center';
-    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
-    cx.fillText('next prizes', sc.x + sc.w / 2, sc.y + 22);
-    cx.font = '15px monospace';
-    cx.fillText(next.join('  ') + '  ?', sc.x + sc.w / 2, sc.y + 46);
-    // walls (screen outline, floor under the top hole, rails) and the closed gate
-    cx.strokeStyle = '#4a5268'; cx.lineWidth = 2;
-    b.walls.forEach(w => { cx.beginPath(); cx.moveTo(w.x1, w.y1); cx.lineTo(w.x2, w.y2); cx.stroke(); });
-    cx.fillStyle = '#ffd166'; cx.fillRect(b.gate.x, b.gate.y, b.gate.w, b.gate.h);
-    cx.font = '9px monospace'; cx.fillText('OPEN (closed for now)', b.gate.x + b.gate.w / 2, b.gate.y + 16);
-    // pockets
-    b.pockets.forEach(p => {
-      cx.fillStyle = p.kind === 'BANK' ? '#163a24' : p.kind === 'DOWN' ? '#2a2140' : '#3a2f10';
-      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
-      cx.fillStyle = p.kind === 'BANK' ? '#6be08a' : p.kind === 'DOWN' ? '#b39dff' : '#ffd166';
-      cx.font = '8px monospace'; cx.fillText(p.kind === 'PRIZE' ? 'START' : p.kind, p.x, p.y + p.r + 9);
-    });
-    // nails and windmills
-    b.pegs.forEach(p => {
-      cx.fillStyle = p.windmill ? '#c9a227' : '#b8bccb';
-      cx.beginPath(); cx.arc(p.x, p.y, p.r || B.PEG_R * 0.7, 0, 7); cx.fill();
-    });
-    cx.fillStyle = '#8a90a2'; cx.textAlign = 'left'; cx.font = '11px monospace';
-    cx.fillText(B.money(B.BIPS[0]) + '/bump', 6, 16);
 
-    if (f) { cx.fillStyle = f.done === 'trap' ? '#ff6b6b' : '#e6e8ef'; cx.beginPath(); cx.arc(f.x, f.y, B.BALL_R, 0, 7); cx.fill(); }
+    // Playfield dish with subtle 90s twilight-violet gradient
+    const dish = cx.createRadialGradient(R.cx, R.cy - 30, 15, R.cx, R.cy, R.r);
+    dish.addColorStop(0, '#3a345c');
+    dish.addColorStop(0.7, '#222645');
+    dish.addColorStop(1, '#161b36');
+    cx.fillStyle = dish;
+    cx.beginPath(); cx.arc(R.cx, R.cy, R.r, 0, 7); cx.fill();
+
+    cx.strokeStyle = '#b9c3d9'; cx.lineWidth = 6;
+    cx.beginPath(); cx.arc(R.cx, R.cy, R.r + 3, 0, 7); cx.stroke();
+
+    // Center screen with jagged arcade trim
+    const sc = b.screen;
+    drawJaggedScreenFrame(sc);
+    cx.fillStyle = '#0c1c16';
+    cx.fillRect(sc.x, sc.y, sc.w, sc.h);
+    cx.strokeStyle = '#6be08a'; cx.lineWidth = 2;
+    cx.strokeRect(sc.x, sc.y, sc.w, sc.h);
+
+    cx.fillStyle = '#7cf29c'; cx.font = 'bold 10px monospace'; cx.textAlign = 'center';
+    const next = [0, 1].map(k => machine.prizes[(state.prizeIndex + k) % machine.prizes.length]);
+    cx.fillText('NEXT PRIZES', sc.x + sc.w / 2, sc.y + 20);
+    cx.font = 'bold 15px monospace';
+    cx.fillStyle = '#ffd166';
+    cx.fillText(next.join('  ') + '  ?', sc.x + sc.w / 2, sc.y + 45);
+
+    // Walls & gate banner
+    cx.strokeStyle = '#8b99bd'; cx.lineWidth = 2;
+    b.walls.forEach(w => {
+      cx.beginPath(); cx.moveTo(w.x1, w.y1); cx.lineTo(w.x2, w.y2); cx.stroke();
+    });
+
+    cx.fillStyle = '#d9383a';
+    cx.fillRect(b.gate.x - 2, b.gate.y - 1, b.gate.w + 4, b.gate.h + 2);
+    cx.strokeStyle = '#ffd166'; cx.lineWidth = 1.2;
+    cx.strokeRect(b.gate.x - 2, b.gate.y - 1, b.gate.w + 4, b.gate.h + 2);
+    cx.fillStyle = '#ffd166'; cx.font = 'bold 8px monospace';
+    cx.fillText('OPEN (CLOSED FOR NOW)', b.gate.x + b.gate.w / 2, b.gate.y + 15);
+
+    // Pockets styled as bold red/gold/green shields
+    b.pockets.forEach(p => {
+      const isBank = p.kind === 'BANK';
+      const isDown = p.kind === 'DOWN';
+      cx.fillStyle = isBank ? '#b82935' : isDown ? '#2c2359' : '#8c5a12';
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
+      cx.strokeStyle = isBank ? '#53d16b' : isDown ? '#b39dff' : '#ffd166';
+      cx.lineWidth = 2; cx.stroke();
+
+      cx.fillStyle = isBank ? '#9ef5b4' : isDown ? '#d2c4ff' : '#ffe48f';
+      cx.font = 'bold 8px monospace';
+      cx.fillText(p.kind === 'PRIZE' ? 'START' : p.kind, p.x, p.y + p.r + 9);
+    });
+
+    // Windmills (glossy crimson/gold bumpers) & nails
+    b.pegs.forEach(p => {
+      if (p.windmill) {
+        cx.fillStyle = '#c92a37';
+        cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
+        cx.strokeStyle = '#ffd166'; cx.lineWidth = 2.5; cx.stroke();
+        cx.fillStyle = '#ffe58f';
+        cx.beginPath(); cx.arc(p.x, p.y, p.r * 0.35, 0, 7); cx.fill();
+      } else {
+        cx.fillStyle = '#d4dae8';
+        cx.beginPath(); cx.arc(p.x, p.y, p.r || B.PEG_R * 0.7, 0, 7); cx.fill();
+      }
+    });
+
+    cx.fillStyle = '#dce4f7'; cx.textAlign = 'left'; cx.font = '11px monospace';
+    cx.fillText(B.money(B.BIPS[0]) + '/bump', 8, 18);
+
+    if (f) {
+      drawBall(f.x, f.y, f.done === 'trap' ? '#ff6b6b' : '#f4f7fc', '#182347');
+    }
     $('boardNo').textContent = 1;
   }
 
@@ -188,7 +452,7 @@
     const result = B.dropBall(machine, aim, state, f => frames.push(f));
     ui();
     const step = () => {
-      fi = Math.min(frames.length - 1, fi + SPEED);   // physics ticks shown per screen frame
+      fi = Math.min(frames.length - 1, fi + SPEED);
       const f = frames[Math.floor(fi)];
       draw(f.board, f);
       $('carry').textContent = B.money(f.bips);
@@ -229,7 +493,7 @@
   });
   cv.addEventListener('pointermove', e => {
     if (!drag) return;
-    const p = pos(e), d = Math.round((drag.y - p.y) / 4);   // drag up = harder
+    const p = pos(e), d = Math.round((drag.y - p.y) / 4);
     if (d !== 0) drag.moved = true;
     setPower(drag.start + d);
   });
