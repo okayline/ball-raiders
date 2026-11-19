@@ -1,0 +1,6 @@
+{
+  // Serve the game's files from public/. No Worker script: the game runs in the page.
+  "name": "ball-raiders",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./public" }
+}
