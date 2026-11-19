@@ -44,7 +44,7 @@ test('loot shows as parts of a ball', () => {
 test('a trap loses the ball and what it carried', () => {
   // board 1 has no traps, so every peg on it is safe: force a machine whose board 1 is all traps
   const m = B.makeMachine('t');
-  m.boards[0].pegs.forEach(p => { p.trap = true; });
+  m.boards.forEach(b => b.pegs.forEach(p => { p.trap = true; }));
   const r = B.dropBall(m, 16, { prizeIndex: 0, revealed: new Set() });
   assert.strictEqual(r.result, 'TRAP');
   assert.strictEqual(r.bips, 0);
@@ -54,6 +54,21 @@ test('every aim on every board ends (no endless ball)', () => {
   const m = B.makeMachine('end');
   for (let aim = 0; aim < B.AIMS; aim++) {
     const r = B.dropBall(m, aim, { prizeIndex: 0, revealed: new Set() });
-    assert.ok(r.result === 'BANK' || r.result === 'TRAP');
+    assert.ok(['BANK', 'TRAP', 'FOUL'].includes(r.result));
   }
+});
+
+test('the layout is symmetrical left to right', () => {
+  const b = B.makeMachine('a').boards[0];
+  const key = p => Math.round(p.x * 10) + ',' + Math.round(p.y * 10);
+  const mirror = p => Math.round((2 * B.RB.cx - p.x) * 10) + ',' + Math.round(p.y * 10);
+  const pegs = new Set(b.pegs.map(key));
+  for (const p of b.pegs) assert.ok(pegs.has(mirror(p)), 'no mirror for peg at ' + key(p));
+  const pockets = new Set(b.pockets.map(key));
+  for (const p of b.pockets) assert.ok(pockets.has(mirror(p)), 'no mirror for pocket at ' + key(p));
+});
+
+test('the weakest powers are foul balls; stronger shots clear the rail', () => {
+  assert.ok(B.launch(0).foul);
+  assert.ok(!B.launch(B.AIMS - 1).foul);
 });

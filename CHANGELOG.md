@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3
+- Added: the cabinet around the machine: a ball tray and a handle. Turn the handle to set the power, tap it to shoot. The ball shoots out at the bottom right and runs up the rail along the frame, over the top, into the machine. Too soft and it rolls back into the tray (no ball used). Board 1's nails and pockets are now the same on both sides.
+- Removed: dropping the ball from the top of board 1 by aiming, and the uneven left/right layout.
+
 ## v0.2
 - Added: board 1 is now a round machine with its nail layout traced from a real 90s pachinko machine: screen, top hole, pockets, windmills, start pocket, a closed OPEN gate. Each bump now builds part of a new ball instead of coins; a whole banked ball can be used as an extra life.
 - Removed: the coin display, board 1's random peg grid and its BANK/DOWN slots (board 1 uses pockets now).

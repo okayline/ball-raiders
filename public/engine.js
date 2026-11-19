@@ -26,37 +26,37 @@
   const SC = RB.r / SRC.r;
   const sx = x => RB.cx + (x - SRC.cx) * SC;
   const sy = y => RB.cy + (y - SRC.cy) * SC;
-  // rails: lines of nails the ball rolls along (from, to)
-  const RAILS = [
-    [[470, 690], [650, 770]],    // top-left
-    [[960, 680], [1140, 760]],   // top-right
-    [[700, 700], [775, 745]],    // funnel into the top hole, left side
-    [[910, 700], [835, 745]],    // funnel into the top hole, right side
-    [[540, 840], [615, 995]],    // left road down to the windmill
-    [[1160, 790], [1245, 990]],  // right road down to the windmill
-    [[360, 880], [330, 1060]],   // left outer lane
-    [[1300, 850], [1335, 1030]], // right outer lane
-    [[540, 1230], [700, 1300]],  // lower left road
-    [[1060, 1230], [900, 1300]], // lower right road
-    [[470, 1240], [540, 1330]],  // guide to the lower-left IN pocket
-    [[1130, 1230], [1060, 1330]],// guide to the lower-right IN pocket
+  // The layout is symmetrical: left-side parts are listed once and mirrored to the right.
+  const MX = x => 2 * SRC.cx - x;
+  const mirrorRail = ([a, b]) => [[MX(a[0]), a[1]], [MX(b[0]), b[1]]];
+  // rails: lines of nails the ball rolls along (from, to). Left side:
+  const LEFT_RAILS = [
+    [[470, 690], [650, 770]],    // top
+    [[540, 840], [615, 995]],    // road down to the windmill
+    [[360, 880], [330, 1060]],   // outer lane
+    [[540, 1230], [700, 1300]],  // lower road
+    [[470, 1240], [540, 1330]],  // guide to the lower IN pocket
   ];
-  // single nails: the two nails either side of the start pocket, and the "S" cluster
-  const NAILS = [[765, 1150], [845, 1150], [775, 1275], [835, 1275], [805, 1320]];
-  // the screen and its topper are solid: an outline of hidden nails, with the top hole left open
-  const SCREEN = [[600, 1130], [600, 880], [660, 820], [745, 785], null, [865, 785], [950, 820], [1010, 880], [1010, 1130], [600, 1130]];
+  const CENTER_RAILS = [
+    [[700, 700], [775, 745]],    // funnel into the top hole (left; mirrored below)
+  ];
+  const RAILS = [...LEFT_RAILS, ...LEFT_RAILS.map(mirrorRail), ...CENTER_RAILS, ...CENTER_RAILS.map(mirrorRail)];
+  // single nails: either side of the start pocket, and the "S" cluster
+  const NAILS = [[765, 1150], [MX(765), 1150], [775, 1275], [MX(775), 1275], [805, 1320]];
+  // the screen and its topper are solid, with the top hole left open
+  const SCREEN = [[600, 1130], [600, 880], [660, 820], [745, 785], null, [MX(745), 785], [MX(660), 820], [MX(600), 880], [MX(600), 1130], [600, 1130]];
+  const LEFT_POCKETS = [
+    { x: 490, y: 800, r: 28, kind: 'BANK', label: 'IN' },
+    { x: 418, y: 1280, r: 28, kind: 'BANK', label: 'IN' },
+    { x: 592, y: 1388, r: 28, kind: 'BANK', label: 'IN' },
+  ];
   const ROUND_POCKETS = [
     { x: 805, y: 778, r: 22, kind: 'DOWN', label: 'secret page' }, // top hole: warps to the next board
-    { x: 490, y: 800, r: 28, kind: 'BANK', label: 'IN' },
-    { x: 1085, y: 755, r: 28, kind: 'BANK', label: 'IN' },
-    { x: 415, y: 1290, r: 28, kind: 'BANK', label: 'IN' },
-    { x: 1190, y: 1270, r: 28, kind: 'BANK', label: 'IN' },
+    ...LEFT_POCKETS, ...LEFT_POCKETS.map(p => Object.assign({}, p, { x: MX(p.x) })),
     { x: 805, y: 1170, r: 24, kind: 'PRIZE', label: 'START' },     // the start pocket = prize hole
-    { x: 595, y: 1390, r: 28, kind: 'BANK', label: 'IN' },
-    { x: 1020, y: 1385, r: 28, kind: 'BANK', label: 'IN' },
   ];
-  const WINDMILLS = [[505, 1080], [1110, 1060]]; // static round bumpers for now
-  const GATE = [[700, 1400], [910, 1400]];       // the OPEN gate, closed for now
+  const WINDMILLS = [[502, 1070], [MX(502), 1070]]; // static round bumpers for now
+  const GATE = [[700, 1400], [MX(700), 1400]];      // the OPEN gate, closed for now
 
   function line(a, b, step, out, extra) {
     const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -136,17 +136,41 @@
     return { seed: String(seedText), boards, prizes };
   }
 
-  const ROUND_START_Y = RB.cy - RB.r + 24;
-  const ROUND_HALF = Math.sqrt(RB.r * RB.r - (RB.r - 24) * (RB.r - 24)) - BALL_R - 2;
-  function aimX(aim, round) {
-    if (round) return RB.cx - ROUND_HALF + (aim * 2 * ROUND_HALF) / (AIMS - 1);
+  function aimX(aim) {
     return 14 + (aim * (W - 28)) / (AIMS - 1);
+  }
+
+  // The handle: power 0..AIMS-1. The ball is shot from the bottom right and runs up the
+  // launch rail just outside the field, along the frame, over the top. Where it leaves the
+  // rail (top left) and how fast depends only on the power, so a shot is always the same.
+  const RAIL_R = RB.r + 7;
+  const LAUNCH_MIN = 8.25, LAUNCH_MAX = 10.6; // the weakest few powers are foul balls that roll back
+  function launchSpeed(power) { return LAUNCH_MIN + (power * (LAUNCH_MAX - LAUNCH_MIN)) / (AIMS - 1); }
+  // Walks the rail; calls onTick for drawing. Returns { foul } or the release point and velocity.
+  function launch(power, onTick) {
+    let ux = 0.77, uy = 0.64;           // start at about 4-5 o'clock (screen coords, y down)
+    let sp = launchSpeed(power);
+    for (let t = 0; t < 2000; t++) {
+      const tx = uy, ty = -ux;          // direction of travel: up the right side, over the top
+      sp += G * ty;                     // gravity along the rail
+      if (sp <= 0) return { foul: true };
+      ux += tx * (sp / RAIL_R); uy += ty * (sp / RAIL_R);
+      const n = Math.sqrt(ux * ux + uy * uy); ux /= n; uy /= n;
+      if (onTick) onTick({ board: 0, x: RB.cx + ux * RAIL_R, y: RB.cy + uy * RAIL_R, bips: 0, rail: true });
+      if (ux <= -0.15 && uy < 0) {       // the end of the rail, just past the top: into the field
+        const ex = uy, ey = -ux, lim = RB.r - BALL_R - 1;
+        return { x: RB.cx + ux * lim, y: RB.cy + uy * lim, vx: ex * sp, vy: ey * sp };
+      }
+    }
+    return { foul: true };
   }
 
   // One ball, start to finish. state = { prizeIndex, revealed:Set } is shared across a run.
   // Calls onTick(frame) if given, for drawing. Returns what happened.
   function dropBall(machine, aim, state, onTick) {
-    let board = 0, x = aimX(aim, true), y = ROUND_START_Y, vx = 0, vy = 0, bips = 0;
+    const shot = launch(aim, onTick);
+    if (shot.foul) return { result: 'FOUL', board: 0, bips: 0, events: [] };
+    let board = 0, x = shot.x, y = shot.y, vx = shot.vx, vy = shot.vy, bips = 0;
     let touching = new Set(), inHole = false, events = [], still = 0, px0 = x, py0 = y, nudges = 0;
     for (let tick = 0; tick < MAX_TICKS * BOARDS; tick++) {
       const B = machine.boards[board];
@@ -290,6 +314,7 @@
     for (let i = 0; i < n; i++) {
       const r = dropBall(machine, aims[i], state);
       if (r.result === 'BANK') banked += r.bips;
+      if (r.result === 'FOUL') { results.push({ result: 'FOUL', board: 0, bips: 0 }); continue; }
       results.push({ result: r.result, board: r.board, bips: r.bips });
     }
     return { banked, results };
@@ -304,6 +329,6 @@
 
   root.BallRaiders = {
     RB, W, H, BALL_R, PEG_R, AIMS, SLOTS, SLOT_Y, BOARDS, BIPS, HOLE, TICKER,
-    rng, seedFromText, makeMachine, aimX, dropBall, playRun, money,
+    rng, seedFromText, makeMachine, aimX, launch, launchSpeed, RAIL_R, dropBall, playRun, money,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
