@@ -145,7 +145,7 @@
     <canvas id="c" width="360" height="480"></canvas>
   </div>
 
-  <div id="msg" class="dim">Press and hold mouse/touch (or Space) to charge power, then release to shoot. BANK keeps bips; going down risks them for more.</div>
+  <div id="msg" class="dim">Press and hold mouse/touch (or Space) to fill the power knob, then release to shoot. BANK keeps bips; going down risks them for more.</div>
 
   <div class="controls-deck">
     <div class="row">
@@ -164,8 +164,8 @@
   const cv = document.getElementById('c'), cx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
   const BALL_COST = 100;
-  const SPEED = 0.65;       // slower, smoother playback speed
-  const CHARGE_RATE = 0.42; // aim steps per frame while holding button/Space
+  const SPEED = 0.65;
+  const CHARGE_RATE = 0.42;
   const STORE = 'ball-raiders-stash';
 
   function load() { try { return Number(localStorage.getItem(STORE)) || 0; } catch (e) { return memStash; } }
@@ -266,6 +266,67 @@
 
   const KNOB = { x: 322, y: 446, r: 20 };
 
+  function drawKnob(pct, ratio) {
+    // Outer teal collar + track
+    cx.fillStyle = '#1ea38b';
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 7, 0, 7); cx.fill();
+
+    cx.strokeStyle = 'rgba(255, 209, 102, .22)';
+    cx.lineWidth = 3.5;
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 3.5, 0, Math.PI * 2); cx.stroke();
+
+    // Base dark navy knob
+    cx.fillStyle = '#1c2954';
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r, 0, 7); cx.fill();
+
+    // Inner circular fill that rises with charge/power
+    if (ratio > 0) {
+      cx.save();
+      cx.beginPath();
+      cx.arc(KNOB.x, KNOB.y, KNOB.r - 1.5, 0, Math.PI * 2);
+      cx.clip();
+      const fillH = (KNOB.r * 2 - 3) * ratio;
+      const topY = KNOB.y + (KNOB.r - 1.5) - fillH;
+      cx.fillStyle = charging ? 'rgba(255, 159, 67, .55)' : 'rgba(255, 209, 102, .32)';
+      cx.fillRect(KNOB.x - KNOB.r, topY, KNOB.r * 2, fillH);
+      cx.restore();
+    }
+
+    cx.strokeStyle = charging ? '#ffd166' : '#7de8d4';
+    cx.lineWidth = charging ? 2.2 : 1.5;
+    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r, 0, 7); cx.stroke();
+
+    // Full-circle progress arc around the knob
+    if (ratio > 0) {
+      const startA = -Math.PI * 0.5;
+      const endA = startA + Math.PI * 2 * ratio;
+      cx.strokeStyle = charging ? '#ff9f43' : '#ffd166';
+      cx.lineWidth = 3.5;
+      cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 3.5, startA, endA); cx.stroke();
+
+      // Pointer hand
+      cx.strokeStyle = '#f4f7fc';
+      cx.lineWidth = 2.2;
+      cx.beginPath();
+      cx.moveTo(KNOB.x, KNOB.y);
+      cx.lineTo(KNOB.x + Math.cos(endA) * (KNOB.r - 4), KNOB.y + Math.sin(endA) * (KNOB.r - 4));
+      cx.stroke();
+    }
+
+    // Percentage centered inside the knob
+    cx.fillStyle = '#ffffff';
+    cx.font = 'bold 9px monospace';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(pct + '%', KNOB.x, KNOB.y + 0.5);
+    cx.textBaseline = 'alphabetic';
+
+    // Status caption above the knob
+    cx.fillStyle = charging ? '#ffd166' : '#f4f7fc';
+    cx.font = 'bold 9px monospace';
+    cx.fillText((charging ? 'CHARGING ' : 'POWER ') + pct + '%', KNOB.x - 4, 412);
+  }
+
   function drawCabinet(R) {
     const face = cx.createLinearGradient(0, 0, B.W, B.H);
     face.addColorStop(0, '#737d91');
@@ -297,27 +358,9 @@
     cx.fillStyle = '#a8f2e4'; cx.font = 'bold 9px monospace'; cx.textAlign = 'left';
     cx.fillText('TRAY', 30, 425);
 
-    cx.fillStyle = '#1ea38b';
-    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 7, 0, 7); cx.fill();
-    cx.fillStyle = '#1c2954';
-    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r, 0, 7); cx.fill();
-    cx.strokeStyle = '#7de8d4'; cx.lineWidth = 1.5; cx.stroke();
-
-    const a0 = Math.PI * 0.75, a1 = a0 + Math.PI * 1.5 * (aim / (B.AIMS - 1));
-    cx.strokeStyle = charging ? '#ff9f43' : '#ffd166';
-    cx.lineWidth = 3.5;
-    cx.beginPath(); cx.arc(KNOB.x, KNOB.y, KNOB.r + 3.5, a0, a1); cx.stroke();
-
-    cx.strokeStyle = '#f4f7fc'; cx.lineWidth = 2.2;
-    cx.beginPath();
-    cx.moveTo(KNOB.x, KNOB.y);
-    cx.lineTo(KNOB.x + Math.cos(a1) * (KNOB.r - 4), KNOB.y + Math.sin(a1) * (KNOB.r - 4));
-    cx.stroke();
-
-    cx.fillStyle = charging ? '#ffd166' : '#f4f7fc';
-    cx.font = 'bold 9px monospace'; cx.textAlign = 'center';
-    const pct = Math.round((aim / (B.AIMS - 1)) * 100);
-    cx.fillText((charging ? 'CHARGING ' : 'POWER ') + pct + '%', KNOB.x - 4, 412);
+    const ratio = aim / (B.AIMS - 1);
+    const pct = Math.round(ratio * 100);
+    drawKnob(pct, ratio);
   }
 
   function drawJaggedScreenFrame(sc) {
