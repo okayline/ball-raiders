@@ -7,7 +7,7 @@
 
   const W = 360, H = 480;           // one board
   const BALL_R = 5, PEG_R = 4;
-  const G = 0.12, BOUNCE = 0.45, WALL_BOUNCE = 0.42;
+  const G = 0.095, BOUNCE = 0.42, WALL_BOUNCE = 0.4;
   const SUBSTEPS = 4;               // prevents tunneling through thin walls & pegs
   const AIMS = 33;                  // aim snaps to 33 drop positions
   const SLOTS = 6;                  // bottom slots per board
@@ -55,7 +55,7 @@
     { x: 592, y: 1388, r: 28, kind: 'BANK', label: 'IN' },
   ];
   const ROUND_POCKETS = [
-    { x: 805, y: 778, r: 22, kind: 'DOWN', label: 'secret page' },
+    { x: 805, y: 778, r: 24, kind: 'DOWN', label: 'secret page' },
     ...LEFT_POCKETS,
     ...LEFT_POCKETS.map(p => Object.assign({}, p, { x: MX(p.x) })),
     { x: 805, y: 1170, r: 24, kind: 'PRIZE', label: 'START' },
@@ -84,10 +84,10 @@
     for (const [x, y] of NAILS) pegs.push({ x: sx(x), y: sy(y), trap: false });
     for (let i = 0; i < SCREEN.length - 1; i++) {
       if (!SCREEN[i] || !SCREEN[i + 1]) continue;
-      seg(SCREEN[i], SCREEN[i + 1], 2.5);
+      seg(SCREEN[i], SCREEN[i + 1], 2.2);
     }
-    seg([745, 790], [805, 806], 2.5);
-    seg([805, 806], [865, 790], 2.5);
+    seg([745, 790], [805, 806], 2.2);
+    seg([805, 806], [865, 790], 2.2);
     seg(GATE[0], GATE[1], 3);
     for (const [x, y] of WINDMILLS) {
       pegs.push({ x: sx(x), y: sy(y), trap: false, r: 45 * SC, windmill: true });
@@ -158,7 +158,7 @@
   }
 
   const RAIL_R = RB.r + 7;
-  const LAUNCH_MIN = 8.25, LAUNCH_MAX = 10.6;
+  const LAUNCH_MIN = 7.4, LAUNCH_MAX = 9.6;
   function launchSpeed(power) {
     return LAUNCH_MIN + (power * (LAUNCH_MAX - LAUNCH_MIN)) / (AIMS - 1);
   }
@@ -180,7 +180,7 @@
       }
       if (ux <= -0.15 && uy < 0) {
         const ex = uy, ey = -ux, lim = RB.r - BALL_R - 1;
-        return { x: RB.cx + ux * lim, y: RB.cy + uy * lim, vx: ex * sp * 0.85, vy: ey * sp * 0.85 };
+        return { x: RB.cx + ux * lim, y: RB.cy + uy * lim, vx: ex * sp * 0.82, vy: ey * sp * 0.82 };
       }
     }
     return { foul: true };
@@ -207,8 +207,7 @@
       const B = machine.boards[board];
       vy += G;
 
-      // Cap extreme velocity spikes so bounces stay controlled
-      const maxSp = 12;
+      const maxSp = 10.5;
       const sp2 = vx * vx + vy * vy;
       if (sp2 > maxSp * maxSp) {
         const s = maxSp / Math.sqrt(sp2);
@@ -275,14 +274,14 @@
             x = p.x + nx * rr;
             y = p.y + ny * rr;
             const vn = vx * nx + vy * ny;
-            const restitution = p.windmill ? 0.72 : BOUNCE;
+            const restitution = p.windmill ? 0.68 : BOUNCE;
             if (vn < 0) {
               vx -= (1 + restitution) * vn * nx;
               vy -= (1 + restitution) * vn * ny;
             }
           }
-          if (Math.abs(nx) < 0.06 && ny < 0) {
-            vx += (i % 2 ? 0.05 : -0.05);
+          if (Math.abs(nx) < 0.08 && ny < 0) {
+            vx += (i % 2 ? 0.09 : -0.09);
           }
           now.add(i);
           if (!touching.has(i)) {
@@ -302,12 +301,20 @@
       }
       touching = now;
 
-      if (++still >= 60) {
+      // Anti-wedge: if ball barely moves over 45 ticks, kick toward center / clear wedge
+      if (++still >= 45) {
         const mx = x - px0, my = y - py0;
-        if (mx * mx + my * my < 4) {
+        if (mx * mx + my * my < 6) {
           nudges++;
-          vx += nudges % 2 ? 1.1 : -1.1;
-          vy -= 1.4;
+          const towardCenter = B.round ? (B.round.cx - x) * 0.015 : (W / 2 - x) * 0.01;
+          vx += (nudges % 2 ? 1.5 : -1.5) + towardCenter;
+          vy += nudges >= 2 ? 1.8 : -1.2;
+          if (nudges >= 4 && B.round) {
+            // Last-resort escape from tight rail pocket
+            x += (x < B.round.cx ? 12 : -12);
+            y += 10;
+            vy = 1.5;
+          }
         }
         still = 0; px0 = x; py0 = y;
       }
@@ -316,10 +323,11 @@
         let pk = null;
         for (const p of B.pockets) {
           const px = x - p.x, py = y - p.y;
-          if (px * px + py * py < p.r * p.r) { pk = p; break; }
+          const capR = p.r * 1.15;
+          if (px * px + py * py < capR * capR) { pk = p; break; }
         }
         const R = B.round, ox = x - R.cx, oy = y - R.cy;
-        const outHole = !pk && oy > R.r * 0.9 && Math.abs(ox) < 30;
+        const outHole = !pk && oy > R.r * 0.88 && Math.abs(ox) < 34;
         if (pk && pk.kind === 'PRIZE') {
           const prize = machine.prizes[state.prizeIndex % machine.prizes.length];
           state.prizeIndex++;
