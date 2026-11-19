@@ -19,24 +19,26 @@
   const PRIZES = ['x2', '+50', 'TRAP', 'x3', '+20', 'TRAP', 'x2', '+100'];
   const HOLE = { x: W / 2, y: 300, r: 10 }; // the prize-line hole, board 2 only
 
-  // Board 1: nail layout mapped from 90s round pachinko machine reference coordinates.
+  // Board 1: the nail layout traced (by eye, from kura's photos) from a real round 90s pachinko
+  // machine. Coordinates are in the photo's pixels and mapped onto the board. Art is our own.
   const SRC = { cx: 805, cy: 1010, r: 565 };
   const RB = { cx: W / 2, cy: 245, r: 170 };
   const SC = RB.r / SRC.r;
   const sx = x => RB.cx + (x - SRC.cx) * SC;
   const sy = y => RB.cy + (y - SRC.cy) * SC;
+  // The layout is symmetrical: left-side parts are listed once and mirrored to the right.
   const MX = x => 2 * SRC.cx - x;
   const mirrorRail = ([a, b]) => [[MX(a[0]), a[1]], [MX(b[0]), b[1]]];
-
+  // rails: lines of nails the ball rolls along (from, to). Left side:
   const LEFT_RAILS = [
-    [[470, 690], [650, 770]],
-    [[540, 840], [615, 995]],
-    [[360, 880], [330, 1060]],
-    [[540, 1230], [700, 1300]],
-    [[470, 1240], [540, 1330]],
+    [[470, 690], [650, 770]],    // top
+    [[540, 840], [615, 995]],    // road down to the windmill
+    [[360, 880], [330, 1060]],   // outer lane
+    [[540, 1230], [700, 1300]],  // lower road
+    [[470, 1240], [540, 1330]],  // guide to the lower IN pocket
   ];
   const CENTER_RAILS = [
-    [[700, 700], [775, 745]],
+    [[700, 700], [775, 745]],    // funnel into the top hole (left; mirrored below)
   ];
   const RAILS = [
     ...LEFT_RAILS,
@@ -44,7 +46,9 @@
     ...CENTER_RAILS,
     ...CENTER_RAILS.map(mirrorRail),
   ];
+  // single nails: either side of the start pocket, and the "S" cluster
   const NAILS = [[765, 1150], [MX(765), 1150], [775, 1275], [MX(775), 1275], [805, 1320]];
+  // the screen and its topper are solid, with the top hole left open
   const SCREEN = [
     [600, 1130], [600, 880], [660, 820], [745, 785], null,
     [MX(745), 785], [MX(660), 820], [MX(600), 880], [MX(600), 1130], [600, 1130],
@@ -55,13 +59,13 @@
     { x: 592, y: 1388, r: 28, kind: 'BANK', label: 'IN' },
   ];
   const ROUND_POCKETS = [
-    { x: 805, y: 778, r: 24, kind: 'DOWN', label: 'secret page' },
+    { x: 805, y: 778, r: 24, kind: 'DOWN', label: 'secret page' }, // top hole: warps to the next board
     ...LEFT_POCKETS,
     ...LEFT_POCKETS.map(p => Object.assign({}, p, { x: MX(p.x) })),
-    { x: 805, y: 1170, r: 24, kind: 'PRIZE', label: 'START' },
+    { x: 805, y: 1170, r: 24, kind: 'PRIZE', label: 'START' },     // the start pocket = prize hole
   ];
-  const WINDMILLS = [[502, 1070], [MX(502), 1070]];
-  const GATE = [[700, 1400], [MX(700), 1400]];
+  const WINDMILLS = [[502, 1070], [MX(502), 1070]]; // static round bumpers for now
+  const GATE = [[700, 1400], [MX(700), 1400]];      // the OPEN gate, closed for now
 
   function line(a, b, step, out, extra) {
     const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -87,7 +91,7 @@
       seg(SCREEN[i], SCREEN[i + 1], 2.2);
     }
     seg([745, 790], [805, 806], 2.2);
-    seg([805, 806], [865, 790], 2.2);
+    seg([805, 806], [865, 790], 2.2); // floor under the top hole
     seg(GATE[0], GATE[1], 3);
     for (const [x, y] of WINDMILLS) {
       pegs.push({ x: sx(x), y: sy(y), trap: false, r: 45 * SC, windmill: true });
@@ -100,6 +104,7 @@
     return { round: RB, pegs, walls, pockets, screen, gate, slots: [] };
   }
 
+  // mulberry32: integer-only, the same on every engine
   function rng(seed) {
     let a = seed >>> 0;
     return function () {
@@ -112,7 +117,7 @@
   }
 
   function seedFromText(text) {
-    let h = 2166136261 >>> 0;
+    let h = 2166136261 >>> 0;     // FNV-1a
     for (let i = 0; i < text.length; i++) {
       h ^= text.charCodeAt(i);
       h = Math.imul(h, 16777619) >>> 0;
@@ -120,6 +125,7 @@
     return h;
   }
 
+  // Build the machine for a seed: three boards of pegs, traps, slot kinds, the prize line.
   function makeMachine(seedText) {
     const r = rng(seedFromText(String(seedText)));
     const boards = [];
@@ -133,11 +139,12 @@
           const x = 24 + col * 39 + (odd ? 19.5 : 0) + Math.floor(r() * 9) - 4;
           if (x > W - 14) continue;
           if (b === 1 && Math.abs(x - HOLE.x) < 22 && Math.abs(y - HOLE.y) < 22) continue;
-          if (r() < 0.12) continue;
+          if (r() < 0.12) continue;  // gaps make each board different
           pegs.push({ x, y, trap: false });
         }
       }
       for (let t = 0; t < TRAPS[b]; t++) pegs[Math.floor(r() * pegs.length)].trap = true;
+      // slot kinds: the last board is all BANK; others mix BANK and DOWN, at least one of each
       const slots = [];
       for (let s = 0; s < SLOTS; s++) {
         slots.push(b === BOARDS - 1 ? 'BANK' : (r() < 0.5 ? 'BANK' : 'DOWN'));
@@ -157,18 +164,22 @@
     return 14 + (aim * (W - 28)) / (AIMS - 1);
   }
 
+  // The handle: power 0..AIMS-1. The ball is shot from the bottom right and runs up the
+  // launch rail just outside the field, along the frame, over the top. Where it leaves the
+  // rail (top left) and how fast depends only on the power, so a shot is always the same.
   const RAIL_R = RB.r + 7;
-  const LAUNCH_MIN = 7.4, LAUNCH_MAX = 9.6;
+  const LAUNCH_MIN = 3.7, LAUNCH_MAX = 4.8; // half strength; weakest powers roll back as fouls
   function launchSpeed(power) {
     return LAUNCH_MIN + (power * (LAUNCH_MAX - LAUNCH_MIN)) / (AIMS - 1);
   }
 
+  // Walks the rail; calls onTick for drawing. Returns { foul } or the release point and velocity.
   function launch(power, onTick) {
-    let ux = 0.77, uy = 0.64;
+    let ux = 0.77, uy = 0.64;           // start at about 4-5 o'clock (screen coords, y down)
     let sp = launchSpeed(power);
     for (let t = 0; t < 2000; t++) {
-      const tx = uy, ty = -ux;
-      sp += G * ty;
+      const tx = uy, ty = -ux;          // direction of travel: up the right side, over the top
+      sp += G * ty;                     // gravity along the rail
       if (sp <= 0) return { foul: true };
       ux += tx * (sp / RAIL_R);
       uy += ty * (sp / RAIL_R);
@@ -178,14 +189,16 @@
       if (onTick) {
         onTick({ board: 0, x: RB.cx + ux * RAIL_R, y: RB.cy + uy * RAIL_R, bips: 0, rail: true });
       }
-      if (ux <= -0.15 && uy < 0) {
+      if (ux <= -0.15 && uy < 0) {       // the end of the rail, just past the top: into the field
         const ex = uy, ey = -ux, lim = RB.r - BALL_R - 1;
-        return { x: RB.cx + ux * lim, y: RB.cy + uy * lim, vx: ex * sp * 0.82, vy: ey * sp * 0.82 };
+        return { x: RB.cx + ux * lim, y: RB.cy + uy * lim, vx: ex * sp * 0.9, vy: ey * sp * 0.9 };
       }
     }
     return { foul: true };
   }
 
+  // One ball, start to finish. state = { prizeIndex, revealed:Set } is shared across a run.
+  // Calls onTick(frame) if given, for drawing. Returns what happened.
   function dropBall(machine, aim, state, onTick) {
     const shot = launch(aim, onTick);
     if (shot.foul) return { result: 'FOUL', board: 0, bips: 0, events: [] };
@@ -280,6 +293,7 @@
               vy -= (1 + restitution) * vn * ny;
             }
           }
+          // a tiny push off the top of a peg so a ball never balances forever
           if (Math.abs(nx) < 0.08 && ny < 0) {
             vx += (i % 2 ? 0.09 : -0.09);
           }
@@ -301,7 +315,7 @@
       }
       touching = now;
 
-      // Anti-wedge: if ball barely moves over 45 ticks, kick toward center / clear wedge
+      // a ball resting in a nook gets a fixed shove toward the middle (same every time, so still fair)
       if (++still >= 45) {
         const mx = x - px0, my = y - py0;
         if (mx * mx + my * my < 6) {
@@ -310,7 +324,6 @@
           vx += (nudges % 2 ? 1.5 : -1.5) + towardCenter;
           vy += nudges >= 2 ? 1.8 : -1.2;
           if (nudges >= 4 && B.round) {
-            // Last-resort escape from tight rail pocket
             x += (x < B.round.cx ? 12 : -12);
             y += 10;
             vy = 1.5;
@@ -360,6 +373,7 @@
         continue;
       }
 
+      // the prize-line hole on board 2: a ball passing through takes the next prize
       if (board === 1) {
         const hx = x - HOLE.x, hy = y - HOLE.y;
         const inside = hx * hx + hy * hy < HOLE.r * HOLE.r;
@@ -395,6 +409,7 @@
     return { result: 'BANK', board, bips, events, stuck: true };
   }
 
+  // A whole run without drawing: seed + aims (+ extra balls) -> total banked.
   function playRun(seedText, aims, balls) {
     const machine = makeMachine(seedText);
     const state = { prizeIndex: 0, revealed: new Set() };
@@ -413,6 +428,7 @@
     return { banked, results };
   }
 
+  // Loot is parts of a new ball: 100 units = 1 whole ball. Banked whole balls become lives.
   const TICKER = 'balls';
   function money(units) {
     const s = String(Math.max(0, Math.floor(units))).padStart(3, '0');
